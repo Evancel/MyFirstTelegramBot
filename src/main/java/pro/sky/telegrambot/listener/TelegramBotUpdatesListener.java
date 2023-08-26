@@ -17,12 +17,11 @@ import pro.sky.telegrambot.repository.NotificationTaskRepository;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 @Service
 public class TelegramBotUpdatesListener implements UpdatesListener {
-    private Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
+    private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
     private final NotificationTaskRepository notificationTaskRepository;
     public TelegramBotUpdatesListener(NotificationTaskRepository notificationTaskRepository1){
         this.notificationTaskRepository=notificationTaskRepository1;

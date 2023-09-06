@@ -4,11 +4,9 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.response.SendResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import pro.sky.telegrambot.model.NotificationTask;
 import pro.sky.telegrambot.parser.Dates;
@@ -39,45 +37,34 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     public int process(List<Update> updates) {
         updates.forEach(update -> {
             logger.info("Processing update: {}", update);
-            // Process your updates here
+
+            // Greetings
             if (update.message().text().equals("/start")){
-                SendMessage message = new SendMessage(update.message().chat().id(),"Welcome to my telegram Bot!");
-                SendResponse response = telegramBot.execute(message);
-            }
+                sendAnswer(update.message().chat().id(),"Welcome to my telegram Bot!");
+            } else {
+                //получаем от пользователя текст
+                String s = update.message().text();
+                LocalDateTime notificationDate = Dates.parse(s);
+                String incomingMessage = InMessage.parseInMessage(s);
 
-            //получаем от пользователя текст
-            String s = update.message().text();
-            LocalDateTime notificationDate = Dates.parse(s);
-            String incomingMessage = InMessage.parseInMessage(s);
-
-            //если дата не определена, значит ввод формата сообщения не соответствует ожидаемому шаблону,
-            //текст сообщения обнуляем
-            if (notificationDate==null){
-                SendMessage message = new SendMessage(update.message().chat().id(),"Error in format input data!");
-                SendResponse response = telegramBot.execute(message);
-            } else{
-                NotificationTask notificationTask = new NotificationTask(update.message().chat().id(),
-                        incomingMessage,
-                        notificationDate);
-                notificationTaskRepository.save(notificationTask);
-                SendMessage message1 = new SendMessage(notificationTask.getChatId(),"Task: " + notificationTask.getMessage());
-                SendResponse response = telegramBot.execute(message1);
+                //если дата не определена, значит ввод формата сообщения не соответствует ожидаемому шаблону,
+                //текст сообщения обнуляем
+                if (notificationDate == null || incomingMessage == null) {
+                    sendAnswer(update.message().chat().id(), "Error in format input data!");
+                } else {
+                    NotificationTask notificationTask = new NotificationTask(update.message().chat().id(),
+                            incomingMessage,
+                            notificationDate);
+                    notificationTaskRepository.save(notificationTask);
+                    sendAnswer(notificationTask.getChatId(), "Task: " + notificationTask.getMessage());
+                }
             }
         });
         return UpdatesListener.CONFIRMED_UPDATES_ALL;
     }
 
-    @Scheduled(cron = "0 0/1 * * * *")
-    public void processBySchedule() {
-        List<NotificationTask> currentTasks = notificationTaskRepository.findAllTasks();
-
-        currentTasks.forEach(task->{
-            SendMessage message = new SendMessage(task.getChatId(),"It's time: " + task.getMessage());
-            SendResponse response = telegramBot.execute(message);
-                }
-        );
-
-
+    private void sendAnswer(Long chatId, String text){
+        SendMessage message = new SendMessage(chatId,text);
+        telegramBot.execute(message);
     }
-
 }
